@@ -1,157 +1,91 @@
-<div align="center">
-  <a href="https://github.com/anncwb/vue-vben-admin">
-    <img alt="VbenAdmin Logo" width="215" src="https://unpkg.com/@vbenjs/static-source@0.1.7/source/logo-v1.webp">
-  </a>
-  <br>
-  <br>
+# 网络监控系统
 
-[![license](https://img.shields.io/github/license/anncwb/vue-vben-admin.svg)](LICENSE)
+实时监控网络设备状态的功能模块，支持多协议探测和历史数据可视化。
 
-  <h1>Vue Vben Admin</h1>
-</div>
+## 功能特性
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=vbenjs_vue-vben-admin&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=vbenjs_vue-vben-admin) [![codeql](https://github.com/vbenjs/vue-vben-admin/actions/workflows/codeql.yml/badge.svg)](https://github.com/vbenjs/vue-vben-admin/actions/workflows/codeql.yml) [![build](https://github.com/vbenjs/vue-vben-admin/actions/workflows/build.yml/badge.svg)](https://github.com/vbenjs/vue-vben-admin/actions/workflows/build.yml) [![ci](https://github.com/vbenjs/vue-vben-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/vbenjs/vue-vben-admin/actions/workflows/ci.yml) [![deploy](https://github.com/vbenjs/vue-vben-admin/actions/workflows/deploy.yml/badge.svg)](https://github.com/vbenjs/vue-vben-admin/actions/workflows/deploy.yml)
+### 监控面板 (Dashboard)
+- 实时显示所有监控目标的状态（在线/离线）
+- RTT（往返时延）实时图表展示
+- 支持搜索过滤监控目标
+- 支持添加、编辑、删除监控目标
+- 离线设备显示"未响应"并以红色标识
+- 深色/浅色主题自适应
 
-**English** | [中文](./README.zh-CN.md) | [日本語](./README.ja-JP.md)
+### 数据查询 (Query)
+- 按时间范围查询历史监控数据
+- 支持按状态筛选（全部/在线/离线）
+- 数据表格展示，支持分页
 
-## Introduction
+## 支持的协议
 
-Vue Vben Admin is a free and open source middle and back-end template. Using the latest `vue3`, `vite`, `TypeScript` and other mainstream technology development, the out-of-the-box middle and back-end front-end solutions can also be used for learning reference.
+| 协议 | 说明 |
+|------|------|
+| ICMP | Ping 探测 |
+| TCP | TCP 端口探测 |
+| UDP | UDP 端口探测 |
+| HTTP | HTTP 服务探测 |
+| HTTPS | HTTPS 服务探测 |
 
-## Upgrade Notice
+## 项目结构
 
-This is the latest version, 5.0, and it is not compatible with previous versions. If you are starting a new project, it is recommended to use the latest version. If you wish to view the old version, please use the [v2 branch](https://github.com/vbenjs/vue-vben-admin/tree/v2).
-
-## Features
-
-- **Latest Technology Stack**: Developed with cutting-edge front-end technologies like Vue 3 and Vite
-- **TypeScript**: A language for application-scale JavaScript
-- **Themes**: Multiple theme colors available with customizable options
-- **Internationalization**: Comprehensive built-in internationalization support
-- **Permissions**: Built-in solution for dynamic route-based permission generation
-
-## Preview
-
-- [Vben Admin](https://vben.pro/) - Full version Chinese site
-
-Test Account: vben/123456
-
-<div align="center">
-  <img alt="VbenAdmin Logo" width="100%" src="https://anncwb.github.io/anncwb/images/preview1.png">
-  <img alt="VbenAdmin Logo" width="100%" src="https://anncwb.github.io/anncwb/images/preview2.png">
-  <img alt="VbenAdmin Logo" width="100%" src="https://anncwb.github.io/anncwb/images/preview3.png">
-</div>
-
-### Use Gitpod
-
-Open the project in Gitpod (free online dev environment for GitHub) and start coding immediately.
-
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/vbenjs/vue-vben-admin)
-
-## Documentation
-
-[Document](https://doc.vben.pro/)
-
-## Install and Use
-
-1. Get the project code
-
-```bash
-git clone https://github.com/vbenjs/vue-vben-admin.git
+```
+apps/web-antd/src/views/monitor/
+├── dashboard/          # 监控面板
+│   └── index.vue
+├── query/              # 数据查询
+│   └── index.vue
+└── data/               # 共享数据
+    └── targets.ts      # 监控目标配置
 ```
 
-2. Install dependencies
+## 数据模型
+
+```typescript
+interface MonitorTarget {
+  key: string;          // 唯一标识
+  name: string;         // 名称
+  address: string;      // IP地址或域名
+  protocol: string;     // 协议类型
+  port: number | null;  // 端口号
+  status: string;       // 状态: online/offline
+  rtt: number;          // 当前RTT (ms)
+  remark: string;       // 备注
+  rttHistory: number[]; // RTT历史数据
+  timeLabels: string[]; // 时间标签
+}
+```
+
+## 快速开始
 
 ```bash
-cd vue-vben-admin
-npm i -g corepack
+# 安装依赖
 pnpm install
+
+# 启动开发服务器
+pnpm dev:antd
+
+# 访问
+http://localhost:5666/
 ```
 
-3. Run
+## 使用说明
 
-```bash
-pnpm dev
-```
+### 添加监控目标
+1. 点击"添加"按钮
+2. 填写名称、地址、协议等信息
+3. 点击确定保存
 
-4. Build
+### 查询历史数据
+1. 进入"数据查询"页面
+2. 选择时间范围
+3. 可按状态筛选结果
 
-```bash
-pnpm build
-```
+## 技术栈
 
-## Change Log
-
-[CHANGELOG](https://github.com/vbenjs/vue-vben-admin/releases)
-
-## How to Contribute
-
-You are very welcome to join! [Raise an issue](https://github.com/anncwb/vue-vben-admin/issues/new/choose) or submit a Pull Request.
-
-**Pull Request Process:**
-
-1. Fork the code
-2. Create your branch: `git checkout -b feat/xxxx`
-3. Submit your changes: `git commit -am 'feat(function): add xxxxx'`
-4. Push your branch: `git push origin feat/xxxx`
-5. Submit `pull request`
-
-## Git Contribution Submission Specification
-
-Reference [vue](https://github.com/vuejs/vue/blob/dev/.github/COMMIT_CONVENTION.md) specification ([Angular](https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-changelog-angular))
-
-- `feat` Add new features
-- `fix` Fix the problem/BUG
-- `style` The code style is related and does not affect the running result
-- `perf` Optimization/performance improvement
-- `refactor` Refactor
-- `revert` Undo edit
-- `test` Test related
-- `docs` Documentation/notes
-- `chore` Dependency update/scaffolding configuration modification etc.
-- `ci` Continuous integration
-- `types` Type definition file changes
-
-## Browser Support
-
-The `Chrome 80+` browser is recommended for local development
-
-Support modern browsers, not IE
-
-| [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/edge/edge_48x48.png" alt="Edge" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Edge | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/firefox/firefox_48x48.png" alt="Firefox" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Firefox | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/chrome/chrome_48x48.png" alt="Chrome" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Chrome | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/safari/safari_48x48.png" alt="Safari" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Safari |
-| :-: | :-: | :-: | :-: |
-| last 2 versions | last 2 versions | last 2 versions | last 2 versions |
-
-## Maintainer
-
-[@Vben](https://github.com/anncwb)
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=vbenjs/vue-vben-admin&type=Date)](https://star-history.com/#vbenjs/vue-vben-admin&Date)
-
-## Donate
-
-If you think this project is helpful to you, you can help the author buy a cup of coffee to show your support!
-
-![donate](https://unpkg.com/@vbenjs/static-source@0.1.7/source/sponsor.png)
-
-<a style="display: block;width: 100px;height: 50px;line-height: 50px; color: #fff;text-align: center; background: #408aee;border-radius: 4px;" href="https://www.paypal.com/paypalme/cvvben">Paypal Me</a>
-
-## Contributors
-
-<a href="https://openomy.app/github/vbenjs/vue-vben-admin" target="_blank" style="display: block; width: 100%;" align="center">
-  <img src="https://openomy.app/svg?repo=vbenjs/vue-vben-admin&chart=bubble&latestMonth=3" target="_blank" alt="Contribution Leaderboard" style="display: block; width: 100%;" />
- </a>
-
-<a href="https://github.com/vbenjs/vue-vben-admin/graphs/contributors">
-  <img alt="Contributors" src="https://contrib.rocks/image?repo=vbenjs/vue-vben-admin" />
-</a>
-
-## Discord
-
-- [Github Discussions](https://github.com/anncwb/vue-vben-admin/discussions)
-
-## License
-
-[MIT © Vben-2020](./LICENSE)
+- Vue 3 + TypeScript
+- Ant Design Vue
+- ECharts (图表)
+- Vben Admin 框架
+- Vite
+- pnpm

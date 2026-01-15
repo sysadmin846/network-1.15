@@ -237,5 +237,6 @@
     "nolebase",
     "rollup",
     "vitest"
-  ]
+  ],
+  "kiroAgent.configureMCP": "Disabled"
 }

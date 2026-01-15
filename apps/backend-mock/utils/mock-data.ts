@@ -19,6 +19,7 @@ export const MOCK_USERS: UserInfo[] = [
     realName: 'Vben',
     roles: ['super'],
     username: 'vben',
+    homePath: '/monitor/dashboard',
   },
   {
     id: 1,
@@ -26,7 +27,7 @@ export const MOCK_USERS: UserInfo[] = [
     realName: 'Admin',
     roles: ['admin'],
     username: 'admin',
-    homePath: '/workspace',
+    homePath: '/monitor/dashboard',
   },
   {
     id: 2,
@@ -34,7 +35,7 @@ export const MOCK_USERS: UserInfo[] = [
     realName: 'Jack',
     roles: ['user'],
     username: 'jack',
-    homePath: '/analytics',
+    homePath: '/monitor/dashboard',
   },
 ];
 
@@ -59,134 +60,47 @@ export const MOCK_CODES = [
 const dashboardMenus = [
   {
     meta: {
-      order: -1,
-      title: 'page.dashboard.title',
+      icon: 'lucide:activity',
+      order: 1,
+      title: 'page.monitor.title',
     },
-    name: 'Dashboard',
-    path: '/dashboard',
-    redirect: '/analytics',
+    name: 'Monitor',
+    path: '/monitor',
     children: [
       {
-        name: 'Analytics',
-        path: '/analytics',
-        component: '/dashboard/analytics/index',
+        name: 'MonitorDashboard',
+        path: '/monitor/dashboard',
+        component: '/monitor/dashboard/index',
         meta: {
           affixTab: true,
-          title: 'page.dashboard.analytics',
+          icon: 'lucide:monitor',
+          title: 'page.monitor.dashboard',
         },
       },
       {
-        name: 'Workspace',
-        path: '/workspace',
-        component: '/dashboard/workspace/index',
+        name: 'MonitorQuery',
+        path: '/monitor/query',
+        component: '/monitor/query/index',
         meta: {
-          title: 'page.dashboard.workspace',
+          icon: 'lucide:search',
+          title: 'page.monitor.query',
         },
       },
     ],
   },
 ];
 
-const createDemosMenus = (role: 'admin' | 'super' | 'user') => {
-  const roleWithMenus = {
-    admin: {
-      component: '/demos/access/admin-visible',
-      meta: {
-        icon: 'mdi:button-cursor',
-        title: 'demos.access.adminVisible',
-      },
-      name: 'AccessAdminVisibleDemo',
-      path: '/demos/access/admin-visible',
-    },
-    super: {
-      component: '/demos/access/super-visible',
-      meta: {
-        icon: 'mdi:button-cursor',
-        title: 'demos.access.superVisible',
-      },
-      name: 'AccessSuperVisibleDemo',
-      path: '/demos/access/super-visible',
-    },
-    user: {
-      component: '/demos/access/user-visible',
-      meta: {
-        icon: 'mdi:button-cursor',
-        title: 'demos.access.userVisible',
-      },
-      name: 'AccessUserVisibleDemo',
-      path: '/demos/access/user-visible',
-    },
-  };
-
-  return [
-    {
-      meta: {
-        icon: 'ic:baseline-view-in-ar',
-        keepAlive: true,
-        order: 1000,
-        title: 'demos.title',
-      },
-      name: 'Demos',
-      path: '/demos',
-      redirect: '/demos/access',
-      children: [
-        {
-          name: 'AccessDemos',
-          path: '/demosaccess',
-          meta: {
-            icon: 'mdi:cloud-key-outline',
-            title: 'demos.access.backendPermissions',
-          },
-          redirect: '/demos/access/page-control',
-          children: [
-            {
-              name: 'AccessPageControlDemo',
-              path: '/demos/access/page-control',
-              component: '/demos/access/index',
-              meta: {
-                icon: 'mdi:page-previous-outline',
-                title: 'demos.access.pageAccess',
-              },
-            },
-            {
-              name: 'AccessButtonControlDemo',
-              path: '/demos/access/button-control',
-              component: '/demos/access/button-control',
-              meta: {
-                icon: 'mdi:button-cursor',
-                title: 'demos.access.buttonControl',
-              },
-            },
-            {
-              name: 'AccessMenuVisible403Demo',
-              path: '/demos/access/menu-visible-403',
-              component: '/demos/access/menu-visible-403',
-              meta: {
-                authority: ['no-body'],
-                icon: 'mdi:button-cursor',
-                menuVisibleWithForbidden: true,
-                title: 'demos.access.menuVisible403',
-              },
-            },
-            roleWithMenus[role],
-          ],
-        },
-      ],
-    },
-  ];
-};
-
 export const MOCK_MENUS = [
   {
-    menus: [...dashboardMenus, ...createDemosMenus('super')],
+    menus: [...dashboardMenus],
     username: 'vben',
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus('admin')],
+    menus: [...dashboardMenus],
     username: 'admin',
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus('user')],
+    menus: [...dashboardMenus],
     username: 'jack',
   },
 ];

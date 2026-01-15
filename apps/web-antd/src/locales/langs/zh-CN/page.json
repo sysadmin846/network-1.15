@@ -7,9 +7,10 @@
     "forgetPassword": "忘记密码",
     "profile": "个人中心"
   },
-  "dashboard": {
-    "title": "概览",
-    "analytics": "分析页",
-    "workspace": "工作台"
+  "monitor": {
+    "title": "监控",
+    "dashboard": "监控面板",
+    "query": "数据查询",
+    "settings": "测试对象"
   }
 }

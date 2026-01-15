@@ -1,6 +1,11 @@
 # 网络监控系统
 
-实时监控网络设备状态的功能模块，支持多协议探测和历史数据可视化。
+基于 [Vben Admin](https://github.com/vbenjs/vue-vben-admin) 模板开发的网络监控系统，实时监控网络设备状态，支持多协议探测和历史数据可视化。
+
+## 项目信息
+
+- **模板来源**: [vue-vben-admin](https://github.com/vbenjs/vue-vben-admin)
+- **监控模块目录**: `apps/web-antd/src/views/monitor/`
 
 ## 功能特性
 

@@ -341,8 +341,27 @@ const onPickerOpenChange = (open: boolean) => {
     // 等待面板渲染完成
     setTimeout(() => {
       scrollTimePanelToCenter();
+      // 添加点击监听，点击后重新居中
+      addTimePanelClickListener();
     }, 100);
   }
+};
+
+// 添加时间面板点击监听
+const addTimePanelClickListener = () => {
+  const columns = document.querySelectorAll('.time-picker-centered .ant-picker-time-panel-column');
+  columns.forEach((column) => {
+    // 移除旧的监听器避免重复
+    const newColumn = column.cloneNode(true);
+    column.parentNode?.replaceChild(newColumn, column);
+    
+    newColumn.addEventListener('click', () => {
+      // 点击后延迟执行居中，等待选中状态更新
+      setTimeout(() => {
+        scrollTimePanelToCenter();
+      }, 50);
+    });
+  });
 };
 
 const scrollTimePanelToCenter = () => {
@@ -355,7 +374,7 @@ const scrollTimePanelToCenter = () => {
       const itemTop = selected.offsetTop;
       // 计算居中位置
       const scrollTop = itemTop - (columnHeight / 2) + (itemHeight / 2);
-      column.scrollTop = Math.max(0, scrollTop);
+      column.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
     }
   });
 };

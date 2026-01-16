@@ -456,10 +456,11 @@ const initHistoryData = (key: string) => {
   if (!target) return;
   
   const refreshInterval = target.refreshInterval * 1000;
+  const now = Date.now();
   
-  // 使用固定数据点数量初始化
+  // 使用固定数据点数量初始化，确保最后一个点是当前时间
   for (let i = 0; i < DATA_POINTS; i++) {
-    const timestamp = Date.now() - (DATA_POINTS - i) * refreshInterval;
+    const timestamp = now - (DATA_POINTS - 1 - i) * refreshInterval;
     appendPoint(target, timestamp);
   }
 };

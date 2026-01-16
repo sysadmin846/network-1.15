@@ -30,6 +30,14 @@
             @open-change="onPickerOpenChange"
           />
         </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-muted-foreground">显示窗口</span>
+          <Select v-model:value="displayWindow" style="width: 120px">
+            <SelectOption :value="10">10分钟</SelectOption>
+            <SelectOption :value="30">30分钟</SelectOption>
+            <SelectOption :value="60">60分钟</SelectOption>
+          </Select>
+        </div>
         <div class="flex gap-2">
           <Button type="primary" @click="handleQuery">
             <template #icon><SearchOutlined /></template>
@@ -95,6 +103,9 @@ const { isDark } = usePreferences();
 // 使用共享的监控对象列表
 const monitorTargets = computed(() => defaultTargets);
 
+// 显示窗口（分钟）
+const displayWindow = ref(60);
+
 // 查询表单
 const queryForm = reactive<{
   targetKey: string | undefined;
@@ -123,6 +134,9 @@ const queryPagination = reactive({
   total: 0,
 });
 
+// 存储完整的图表数据用于缩放
+const fullChartData = ref<{ time: string; rtt: number; status: string; fullTime: string }[]>([]);
+
 // 图表
 const queryChartRef = ref<HTMLDivElement>();
 let chartInstance: echarts.ECharts | null = null;
@@ -144,6 +158,8 @@ const chartColors = computed(() => ({
   tooltipBg: isDark.value ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
   tooltipBorder: isDark.value ? '#4a4a4a' : '#e0e0e0',
   tooltipText: isDark.value ? '#e0e0e0' : '#333',
+  dataZoomBg: isDark.value ? '#333' : '#e8e8e8',
+  dataZoomFill: isDark.value ? '#555' : '#d3d3d3',
 }));
 
 // 获取 RTT 样式类
@@ -154,37 +170,51 @@ const getRttClass = (rtt: number, status?: string): string => {
   return 'text-green-500 font-medium';
 };
 
-// 初始化图表 - 根据状态显示不同颜色
-const initChart = (data: { time: string; rtt: number; status: string }[]) => {
+// 根据状态和RTT值设置颜色
+const getPointColor = (status: string, rtt: number) => {
+  if (status === 'offline') return '#ef4444';
+  if (rtt >= 100) return '#ef4444';
+  if (rtt >= 50) return '#eab308';
+  return '#22c55e';
+};
+
+// 计算时间范围是否超过一天
+const isLongTimeRange = computed(() => {
+  if (!queryForm.timeRange || !queryForm.timeRange[0] || !queryForm.timeRange[1]) {
+    return false;
+  }
+  const diff = queryForm.timeRange[1].valueOf() - queryForm.timeRange[0].valueOf();
+  return diff > 24 * 60 * 60 * 1000; // 超过一天
+});
+
+// 初始化图表
+const initChart = (data: { time: string; rtt: number; status: string; fullTime: string }[]) => {
   if (!queryChartRef.value) return;
   if (chartInstance) chartInstance.dispose();
   chartInstance = echarts.init(queryChartRef.value);
   const colors = chartColors.value;
-  
-  // 根据状态和RTT值设置每个点的颜色
-  const getPointColor = (status: string, rtt: number) => {
-    if (status === 'offline') return '#ef4444'; // 红色 - 离线
-    if (rtt >= 100) return '#ef4444'; // 红色 - 高延迟
-    if (rtt >= 50) return '#eab308'; // 黄色 - 中等延迟
-    return '#22c55e'; // 绿色 - 正常
-  };
 
-  // 为每个数据点设置颜色
   const seriesData = data.map((d) => ({
     value: d.status === 'offline' ? 0 : d.rtt,
     itemStyle: { color: getPointColor(d.status, d.rtt) },
   }));
 
-  // 创建分段的线条颜色
   const pieces = data.map((d, index) => ({
     gt: index - 1,
     lte: index,
     color: getPointColor(d.status, d.rtt),
   }));
 
+  // 计算初始显示范围（基于显示窗口）
+  const windowMs = displayWindow.value * 60 * 1000;
+  const totalMs = data.length > 1 ? 
+    (new Date(data[data.length - 1].fullTime).getTime() - new Date(data[0].fullTime).getTime()) : 0;
+  const endPercent = 100;
+  const startPercent = totalMs > windowMs ? Math.max(0, 100 - (windowMs / totalMs) * 100) : 0;
+
   const option: echarts.EChartsOption = {
     title: { text: 'RTT 趋势图', left: 'center', textStyle: { color: colors.tooltipText, fontSize: 14 } },
-    grid: { left: '3%', right: '4%', bottom: '3%', top: '15%', containLabel: true },
+    grid: { left: '3%', right: '4%', bottom: isLongTimeRange.value ? '18%' : '10%', top: '15%', containLabel: true },
     visualMap: {
       show: false,
       dimension: 0,
@@ -205,6 +235,28 @@ const initChart = (data: { time: string; rtt: number; status: string }[]) => {
       axisLabel: { color: colors.axisLabel },
       splitLine: { lineStyle: { color: colors.splitLine } },
     },
+    dataZoom: isLongTimeRange.value ? [
+      {
+        type: 'slider',
+        show: true,
+        xAxisIndex: [0],
+        start: startPercent,
+        end: endPercent,
+        height: 25,
+        bottom: 10,
+        backgroundColor: colors.dataZoomBg,
+        fillerColor: colors.dataZoomFill,
+        borderColor: colors.axisLine,
+        handleStyle: { color: '#1890ff' },
+        textStyle: { color: colors.axisLabel },
+      },
+      {
+        type: 'inside',
+        xAxisIndex: [0],
+        start: startPercent,
+        end: endPercent,
+      },
+    ] : [],
     series: [{
       name: 'RTT',
       type: 'line',
@@ -212,7 +264,7 @@ const initChart = (data: { time: string; rtt: number; status: string }[]) => {
       data: seriesData,
       lineStyle: { width: 2 },
       symbol: 'circle',
-      symbolSize: 6,
+      symbolSize: 4,
     }],
     tooltip: {
       trigger: 'axis',
@@ -225,7 +277,7 @@ const initChart = (data: { time: string; rtt: number; status: string }[]) => {
         const item = data[dataIndex];
         const statusText = item.status === 'offline' ? '离线' : '在线';
         const statusColor = item.status === 'offline' ? '#ef4444' : '#22c55e';
-        return `${item.time}<br/>
+        return `${item.fullTime}<br/>
           状态: <span style="color:${statusColor}">${statusText}</span><br/>
           RTT: <span style="color:${getPointColor(item.status, item.rtt)}">${item.status === 'offline' ? '未响应' : item.rtt + ' ms'}</span>`;
       },
@@ -246,11 +298,11 @@ const handleQuery = () => {
   
   setTimeout(() => {
     const mockData = [];
+    const chartData: { time: string; rtt: number; status: string; fullTime: string }[] = [];
     const isOfflineTarget = target.status === 'offline';
-    // 使用监控对象的刷新间隔（秒转毫秒）
-    const baseRefreshInterval = (target.refreshInterval || 2) * 1000;
+    // 使用监控对象的刷新间隔（秒转毫秒）- 必须与监控面板同步
+    const refreshInterval = (target.refreshInterval || 2) * 1000;
     
-    // 使用用户选择的时间范围，如果没有选择则使用当前时间往前推
     let startTime: number;
     let endTime: number;
     
@@ -258,36 +310,26 @@ const handleQuery = () => {
       startTime = queryForm.timeRange[0].valueOf();
       endTime = queryForm.timeRange[1].valueOf();
     } else {
+      // 默认显示一小时
       endTime = Date.now();
-      startTime = endTime - 50 * baseRefreshInterval;
+      startTime = endTime - 60 * 60 * 1000;
     }
     
-    // 计算理论数据点数量
-    const totalPoints = Math.floor((endTime - startTime) / baseRefreshInterval);
-    // 最多显示 100 个点，如果超过则调整采样间隔
-    const maxPoints = 100;
-    const sampleRate = Math.max(1, Math.ceil(totalPoints / maxPoints));
-    const actualInterval = baseRefreshInterval * sampleRate;
-    const dataPoints = Math.min(totalPoints, maxPoints);
+    // 按实际刷新间隔生成数据点
+    const dataPoints = Math.floor((endTime - startTime) / refreshInterval);
     
     for (let i = 0; i < dataPoints; i++) {
-      // 从开始时间递增
-      const time = new Date(startTime + i * actualInterval);
-      // 完整时间格式：年-月-日 时:分:秒（用于表格）
+      const time = new Date(startTime + i * refreshInterval);
       const fullTimeStr = `${time.getFullYear()}-${(time.getMonth() + 1).toString().padStart(2, '0')}-${time.getDate().toString().padStart(2, '0')} ${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`;
-      // 简短时间格式：时:分:秒（用于图表）
       const shortTimeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`;
       
-      // 根据目标状态生成数据
       let status: string;
       let rtt: number;
       
       if (isOfflineTarget) {
-        // 离线目标：全部显示离线
         status = 'offline';
         rtt = 0;
       } else {
-        // 在线目标：随机生成一些离线点模拟网络波动
         status = Math.random() > 0.1 ? 'online' : 'offline';
         rtt = status === 'offline' ? 0 : Math.floor(Math.random() * 80) + 20;
       }
@@ -301,20 +343,36 @@ const handleQuery = () => {
         time: fullTimeStr,
         shortTime: shortTimeStr,
       });
+      
+      chartData.push({
+        time: shortTimeStr,
+        rtt,
+        status,
+        fullTime: fullTimeStr,
+      });
     }
+    
     queryResults.value = mockData;
+    fullChartData.value = chartData;
     queryPagination.total = mockData.length;
     queryLoading.value = false;
-    // 图表使用简短时间
-    nextTick(() => initChart(mockData.map((d) => ({ time: d.shortTime, rtt: d.rtt, status: d.status }))));
+    nextTick(() => initChart(chartData));
   }, 500);
 };
+
+// 监听显示窗口变化，重新渲染图表
+watch(displayWindow, () => {
+  if (fullChartData.value.length > 0) {
+    initChart(fullChartData.value);
+  }
+});
 
 // 重置查询
 const handleReset = () => {
   queryForm.targetKey = undefined;
   queryForm.timeRange = null;
   queryResults.value = [];
+  fullChartData.value = [];
   queryPagination.current = 1;
   queryPagination.total = 0;
   if (chartInstance) {
@@ -331,8 +389,8 @@ const handleTableChange = (pagination: { current: number; pageSize: number }) =>
 
 // 监听主题变化
 watch(isDark, () => {
-  if (queryResults.value.length > 0 && chartInstance) {
-    initChart(queryResults.value.map((d) => ({ time: d.shortTime, rtt: d.rtt, status: d.status })));
+  if (fullChartData.value.length > 0 && chartInstance) {
+    initChart(fullChartData.value);
   }
 });
 
@@ -341,35 +399,26 @@ onUnmounted(() => {
   if (timePanelObserver) timePanelObserver.disconnect();
 });
 
-// 时间选择器打开时，将选中项滚动到居中位置
+// 时间选择器相关
 const onPickerOpenChange = (open: boolean) => {
   if (open) {
-    // 等待面板渲染完成
     setTimeout(() => {
       scrollTimePanelToCenter();
-      // 使用 MutationObserver 监听选中状态变化
       observeTimePanel();
     }, 100);
   }
 };
 
-// 使用 MutationObserver 监听时间面板选中状态变化
 let timePanelObserver: MutationObserver | null = null;
 
 const observeTimePanel = () => {
-  // 清理旧的观察器
-  if (timePanelObserver) {
-    timePanelObserver.disconnect();
-  }
+  if (timePanelObserver) timePanelObserver.disconnect();
   
   const panel = document.querySelector('.time-picker-centered .ant-picker-time-panel');
   if (!panel) return;
   
   timePanelObserver = new MutationObserver(() => {
-    // 选中状态变化后居中，延迟更长时间确保在 Ant Design 滚动之后执行
-    setTimeout(() => {
-      scrollTimePanelToCenter();
-    }, 150);
+    setTimeout(() => scrollTimePanelToCenter(), 150);
   });
   
   timePanelObserver.observe(panel, {
@@ -387,21 +436,15 @@ const scrollTimePanelToCenter = () => {
       const columnHeight = column.clientHeight;
       const itemHeight = selected.offsetHeight;
       const itemTop = selected.offsetTop;
-      // 计算居中位置
       const scrollTop = itemTop - (columnHeight / 2) + (itemHeight / 2);
-      // 直接设置 scrollTop，不使用 smooth 避免与 Ant Design 冲突
       column.scrollTop = Math.max(0, scrollTop);
     }
   });
 };
 </script>
 
-
-
 <style>
-/* 时间选择器居中样式 */
 .time-picker-centered .ant-picker-time-panel-column {
-  /* 隐藏滚动条 */
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -411,13 +454,11 @@ const scrollTimePanelToCenter = () => {
   width: 0;
 }
 
-/* 选中项高亮 */
 .time-picker-centered .ant-picker-time-panel-column > li.ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner {
   background-color: #1890ff !important;
   color: #fff !important;
 }
 
-/* hover 效果 */
 .time-picker-centered .ant-picker-time-panel-column > li.ant-picker-time-panel-cell .ant-picker-time-panel-cell-inner:hover {
   background-color: rgba(24, 144, 255, 0.4) !important;
 }

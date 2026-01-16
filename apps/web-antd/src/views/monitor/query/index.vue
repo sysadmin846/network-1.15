@@ -247,9 +247,12 @@ const handleQuery = () => {
     const mockData = [];
     const now = Date.now();
     const isOfflineTarget = target.status === 'offline';
+    // 使用监控对象的刷新间隔（秒转毫秒）
+    const refreshInterval = (target.refreshInterval || 2) * 1000;
     
     for (let i = 0; i < 50; i++) {
-      const time = new Date(now - (50 - i) * 60000);
+      // 根据刷新间隔生成时间点
+      const time = new Date(now - (50 - i) * refreshInterval);
       const timeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`;
       
       // 根据目标状态生成数据

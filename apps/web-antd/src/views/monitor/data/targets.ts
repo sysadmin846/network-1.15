@@ -8,6 +8,7 @@ export interface MonitorTarget {
   status: string;
   rtt: number;
   remark: string;
+  refreshInterval: number;
   rttHistory: number[];
   timeLabels: string[];
 }
@@ -23,19 +24,10 @@ export const defaultTargets: Omit<MonitorTarget, 'rttHistory' | 'timeLabels'>[] 
     status: 'online',
     rtt: 45,
     remark: '生产环境主服务器',
+    refreshInterval: 2,
   },
   {
     key: '2',
-    name: '备份服务器',
-    address: '192.168.1.101',
-    protocol: 'TCP',
-    port: 22,
-    status: 'online',
-    rtt: 52,
-    remark: '生产环境备份服务器',
-  },
-  {
-    key: '3',
     name: '数据库服务器',
     address: '192.168.1.102',
     protocol: 'TCP',
@@ -43,9 +35,10 @@ export const defaultTargets: Omit<MonitorTarget, 'rttHistory' | 'timeLabels'>[] 
     status: 'online',
     rtt: 38,
     remark: 'MySQL数据库',
+    refreshInterval: 2,
   },
   {
-    key: '4',
+    key: '3',
     name: 'Redis缓存',
     address: '192.168.1.103',
     protocol: 'TCP',
@@ -53,9 +46,10 @@ export const defaultTargets: Omit<MonitorTarget, 'rttHistory' | 'timeLabels'>[] 
     status: 'online',
     rtt: 12,
     remark: 'Redis缓存服务器',
+    refreshInterval: 2,
   },
   {
-    key: '5',
+    key: '4',
     name: 'Nginx网关',
     address: '192.168.1.104',
     protocol: 'HTTP',
@@ -63,9 +57,10 @@ export const defaultTargets: Omit<MonitorTarget, 'rttHistory' | 'timeLabels'>[] 
     status: 'online',
     rtt: 28,
     remark: '前端网关服务器',
+    refreshInterval: 2,
   },
   {
-    key: '6',
+    key: '5',
     name: 'API服务',
     address: '192.168.1.105',
     protocol: 'HTTPS',
@@ -73,56 +68,18 @@ export const defaultTargets: Omit<MonitorTarget, 'rttHistory' | 'timeLabels'>[] 
     status: 'online',
     rtt: 65,
     remark: '后端API服务',
+    refreshInterval: 2,
   },
   {
-    key: '7',
-    name: '日志服务器',
-    address: '192.168.1.106',
-    protocol: 'TCP',
-    port: 9200,
-    status: 'offline',
-    rtt: 0,
-    remark: 'Elasticsearch日志',
-  },
-  {
-    key: '8',
-    name: '消息队列',
-    address: '192.168.1.107',
-    protocol: 'TCP',
-    port: 5672,
-    status: 'online',
-    rtt: 22,
-    remark: 'RabbitMQ消息队列',
-  },
-  {
-    key: '9',
+    key: '6',
     name: 'Google',
     address: 'www.google.com',
     protocol: 'HTTPS',
     port: 443,
     status: 'offline',
     rtt: 0,
-    remark: '谷歌搜索（国内不可访问）',
-  },
-  {
-    key: '10',
-    name: 'YouTube',
-    address: 'www.youtube.com',
-    protocol: 'HTTPS',
-    port: 443,
-    status: 'offline',
-    rtt: 0,
-    remark: 'YouTube视频（国内不可访问）',
-  },
-  {
-    key: '11',
-    name: 'Twitter',
-    address: 'twitter.com',
-    protocol: 'HTTPS',
-    port: 443,
-    status: 'offline',
-    rtt: 0,
-    remark: 'Twitter社交（国内不可访问）',
+    remark: '谷歌（国内不可访问）',
+    refreshInterval: 5,
   },
 ];
 

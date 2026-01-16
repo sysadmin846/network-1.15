@@ -246,14 +246,28 @@ const handleQuery = () => {
   
   setTimeout(() => {
     const mockData = [];
-    const now = Date.now();
     const isOfflineTarget = target.status === 'offline';
     // 使用监控对象的刷新间隔（秒转毫秒）
     const refreshInterval = (target.refreshInterval || 2) * 1000;
     
-    for (let i = 0; i < 50; i++) {
-      // 根据刷新间隔生成时间点
-      const time = new Date(now - (50 - i) * refreshInterval);
+    // 使用用户选择的时间范围，如果没有选择则使用当前时间往前推
+    let startTime: number;
+    let endTime: number;
+    
+    if (queryForm.timeRange && queryForm.timeRange[0] && queryForm.timeRange[1]) {
+      startTime = queryForm.timeRange[0].valueOf();
+      endTime = queryForm.timeRange[1].valueOf();
+    } else {
+      endTime = Date.now();
+      startTime = endTime - 50 * refreshInterval;
+    }
+    
+    // 根据时间范围和刷新间隔计算数据点数量
+    const dataPoints = Math.min(Math.floor((endTime - startTime) / refreshInterval), 200);
+    
+    for (let i = 0; i < dataPoints; i++) {
+      // 从开始时间递增
+      const time = new Date(startTime + i * refreshInterval);
       // 完整时间格式：年-月-日 时:分:秒（用于表格）
       const fullTimeStr = `${time.getFullYear()}-${(time.getMonth() + 1).toString().padStart(2, '0')}-${time.getDate().toString().padStart(2, '0')} ${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`;
       // 简短时间格式：时:分:秒（用于图表）

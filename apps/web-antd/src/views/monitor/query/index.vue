@@ -64,7 +64,9 @@
             />
           </template>
           <template v-if="column.key === 'rtt'">
-            <span :class="getRttClass(record.rtt)">{{ record.rtt }} ms</span>
+            <span :class="getRttClass(record.rtt, record.status)">
+              {{ record.status === 'offline' ? '未响应' : `${record.rtt} ms` }}
+            </span>
           </template>
         </template>
       </Table>
@@ -144,21 +146,49 @@ const chartColors = computed(() => ({
 }));
 
 // 获取 RTT 样式类
-const getRttClass = (rtt: number): string => {
-  if (rtt < 50) return 'text-green-500 font-medium';
-  if (rtt < 100) return 'text-yellow-500 font-medium';
-  return 'text-red-500 font-medium';
+const getRttClass = (rtt: number, status?: string): string => {
+  if (status === 'offline') return 'text-red-500 font-medium';
+  if (rtt >= 100) return 'text-red-500 font-medium';
+  if (rtt >= 50) return 'text-yellow-500 font-medium';
+  return 'text-green-500 font-medium';
 };
 
-// 初始化图表
-const initChart = (data: { time: string; rtt: number }[]) => {
+// 初始化图表 - 根据状态显示不同颜色
+const initChart = (data: { time: string; rtt: number; status: string }[]) => {
   if (!queryChartRef.value) return;
   if (chartInstance) chartInstance.dispose();
   chartInstance = echarts.init(queryChartRef.value);
   const colors = chartColors.value;
+  
+  // 根据状态和RTT值设置每个点的颜色
+  const getPointColor = (status: string, rtt: number) => {
+    if (status === 'offline') return '#ef4444'; // 红色 - 离线
+    if (rtt >= 100) return '#ef4444'; // 红色 - 高延迟
+    if (rtt >= 50) return '#eab308'; // 黄色 - 中等延迟
+    return '#22c55e'; // 绿色 - 正常
+  };
+
+  // 为每个数据点设置颜色
+  const seriesData = data.map((d) => ({
+    value: d.status === 'offline' ? 0 : d.rtt,
+    itemStyle: { color: getPointColor(d.status, d.rtt) },
+  }));
+
+  // 创建分段的线条颜色
+  const pieces = data.map((d, index) => ({
+    gt: index - 1,
+    lte: index,
+    color: getPointColor(d.status, d.rtt),
+  }));
+
   const option: echarts.EChartsOption = {
     title: { text: 'RTT 趋势图', left: 'center', textStyle: { color: colors.tooltipText, fontSize: 14 } },
     grid: { left: '3%', right: '4%', bottom: '3%', top: '15%', containLabel: true },
+    visualMap: {
+      show: false,
+      dimension: 0,
+      pieces: pieces,
+    },
     xAxis: {
       type: 'category',
       data: data.map((d) => d.time),
@@ -169,6 +199,7 @@ const initChart = (data: { time: string; rtt: number }[]) => {
     yAxis: {
       type: 'value',
       name: 'RTT (ms)',
+      min: 0,
       axisLine: { lineStyle: { color: colors.axisLine } },
       axisLabel: { color: colors.axisLabel },
       splitLine: { lineStyle: { color: colors.splitLine } },
@@ -177,15 +208,10 @@ const initChart = (data: { time: string; rtt: number }[]) => {
       name: 'RTT',
       type: 'line',
       smooth: true,
-      data: data.map((d) => d.rtt),
-      lineStyle: { color: '#1890ff', width: 2 },
-      areaStyle: {
-        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
-          { offset: 1, color: 'rgba(24, 144, 255, 0.05)' },
-        ]),
-      },
-      itemStyle: { color: '#1890ff' },
+      data: seriesData,
+      lineStyle: { width: 2 },
+      symbol: 'circle',
+      symbolSize: 6,
     }],
     tooltip: {
       trigger: 'axis',
@@ -193,6 +219,15 @@ const initChart = (data: { time: string; rtt: number }[]) => {
       borderColor: colors.tooltipBorder,
       borderWidth: 1,
       textStyle: { color: colors.tooltipText },
+      formatter: (params: any) => {
+        const dataIndex = params[0].dataIndex;
+        const item = data[dataIndex];
+        const statusText = item.status === 'offline' ? '离线' : '在线';
+        const statusColor = item.status === 'offline' ? '#ef4444' : '#22c55e';
+        return `${item.time}<br/>
+          状态: <span style="color:${statusColor}">${statusText}</span><br/>
+          RTT: <span style="color:${getPointColor(item.status, item.rtt)}">${item.status === 'offline' ? '未响应' : item.rtt + ' ms'}</span>`;
+      },
     },
   };
   chartInstance.setOption(option);
@@ -203,25 +238,47 @@ const handleQuery = () => {
   if (!queryForm.targetKey) return;
   queryLoading.value = true;
   const target = monitorTargets.value.find((t) => t.key === queryForm.targetKey);
+  if (!target) {
+    queryLoading.value = false;
+    return;
+  }
+  
   setTimeout(() => {
     const mockData = [];
     const now = Date.now();
+    const isOfflineTarget = target.status === 'offline';
+    
     for (let i = 0; i < 50; i++) {
       const time = new Date(now - (50 - i) * 60000);
       const timeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`;
+      
+      // 根据目标状态生成数据
+      let status: string;
+      let rtt: number;
+      
+      if (isOfflineTarget) {
+        // 离线目标：全部显示离线
+        status = 'offline';
+        rtt = 0;
+      } else {
+        // 在线目标：随机生成一些离线点模拟网络波动
+        status = Math.random() > 0.1 ? 'online' : 'offline';
+        rtt = status === 'offline' ? 0 : Math.floor(Math.random() * 80) + 20;
+      }
+      
       mockData.push({
         key: `${i}`,
-        name: target?.name || '',
-        address: `${target?.address || ''}${target?.port ? `:${target.port}` : ''}`,
-        status: Math.random() > 0.1 ? 'online' : 'offline',
-        rtt: Math.floor(Math.random() * 80) + 20,
+        name: target.name,
+        address: `${target.address}${target.port ? `:${target.port}` : ''}`,
+        status,
+        rtt,
         time: timeStr,
       });
     }
     queryResults.value = mockData;
     queryPagination.total = mockData.length;
     queryLoading.value = false;
-    nextTick(() => initChart(mockData.map((d) => ({ time: d.time, rtt: d.rtt }))));
+    nextTick(() => initChart(mockData.map((d) => ({ time: d.time, rtt: d.rtt, status: d.status }))));
   }, 500);
 };
 
@@ -247,7 +304,7 @@ const handleTableChange = (pagination: { current: number; pageSize: number }) =>
 // 监听主题变化
 watch(isDark, () => {
   if (queryResults.value.length > 0 && chartInstance) {
-    initChart(queryResults.value.map((d) => ({ time: d.time, rtt: d.rtt })));
+    initChart(queryResults.value.map((d) => ({ time: d.time, rtt: d.rtt, status: d.status })));
   }
 });
 

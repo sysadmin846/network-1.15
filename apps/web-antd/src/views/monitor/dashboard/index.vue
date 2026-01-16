@@ -373,11 +373,15 @@ const appendPoint = (target: MonitorTarget, timestamp?: number) => {
   target.rttHistory.push(rtt);
   target.timeLabels.push(timeStr);
 
-  if (target.rttHistory.length > 30) {
+  // 保持固定长度
+  if (target.rttHistory.length > DATA_POINTS) {
     target.rttHistory.shift();
     target.timeLabels.shift();
   }
 };
+
+// 固定数据点数量
+const DATA_POINTS = 30;
 
 // 初始化单个目标的图表
 const initChartForTarget = (key: string) => {
@@ -389,14 +393,16 @@ const initChartForTarget = (key: string) => {
 
   let chart = chartInstances.get(key);
   if (!chart) {
-    // 使用 svg 渲染器，对于大量小图表性能更好
     chart = echarts.init(el, undefined, { renderer: 'canvas' });
     chartInstances.set(key, chart);
   }
 
   const colors = chartColors.value;
   const option: echarts.EChartsOption = {
-    animation: false, // 关闭动画提升性能
+    // 开启动画，实现滑动效果
+    animation: true,
+    animationDuration: 300,
+    animationEasing: 'linear',
     grid: { left: 50, right: 20, bottom: 30, top: 10 },
     xAxis: {
       type: 'category',
@@ -412,10 +418,12 @@ const initChartForTarget = (key: string) => {
       axisLine: { lineStyle: { color: colors.axisLine } },
       axisLabel: { color: colors.axisLabel, fontSize: 10 },
       splitLine: { lineStyle: { color: colors.splitLine } },
+      min: 0,
+      max: 100,
     },
     series: [{
       type: 'line',
-      smooth: true,
+      smooth: 0.3,
       data: target.rttHistory,
       lineStyle: { color: '#1890ff', width: 2 },
       areaStyle: {
@@ -425,8 +433,10 @@ const initChartForTarget = (key: string) => {
         ]),
       },
       itemStyle: { color: '#1890ff' },
-      symbol: 'none', // 不显示数据点，减少渲染
-      sampling: 'lttb', // 使用降采样算法
+      symbol: 'none',
+      // 关键：开启动画更新
+      animationDuration: 300,
+      animationEasing: 'linear',
     }],
     tooltip: {
       trigger: 'axis',
@@ -446,23 +456,28 @@ const initHistoryData = (key: string) => {
   if (!target) return;
   
   const refreshInterval = target.refreshInterval * 1000;
-  const historyCount = 20;
   
-  for (let i = 0; i < historyCount; i++) {
-    const timestamp = Date.now() - (historyCount - i) * refreshInterval;
+  // 使用固定数据点数量初始化
+  for (let i = 0; i < DATA_POINTS; i++) {
+    const timestamp = Date.now() - (DATA_POINTS - i) * refreshInterval;
     appendPoint(target, timestamp);
   }
 };
 
-// 更新单个目标的图表
+// 更新单个目标的图表（滑动效果）
 const updateSingleTarget = (target: MonitorTarget) => {
+  // 追加新数据点，移除最旧的点
   appendPoint(target);
 
   const chart = chartInstances.get(target.key);
   if (chart) {
+    // 使用 notMerge: false 实现平滑过渡动画
     chart.setOption({
-      xAxis: { data: target.timeLabels },
-      series: [{ data: target.rttHistory }],
+      xAxis: { data: [...target.timeLabels] },
+      series: [{ data: [...target.rttHistory] }],
+    }, {
+      notMerge: false,
+      lazyUpdate: false,
     });
   }
 };

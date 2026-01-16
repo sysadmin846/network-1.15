@@ -55,6 +55,9 @@
             <div v-if="target.remark" class="text-sm text-muted-foreground">
               <span>备注: {{ target.remark }}</span>
             </div>
+            <div class="text-sm text-muted-foreground">
+              <span>刷新: {{ target.refreshInterval }}秒</span>
+            </div>
           </div>
           <div class="flex items-center gap-4">
             <div class="text-right">
@@ -124,6 +127,14 @@
         </FormItem>
         <FormItem label="备注" name="remark">
           <Textarea v-model:value="formData.remark" placeholder="请输入备注" :rows="3" />
+        </FormItem>
+        <FormItem label="刷新间隔" name="refreshInterval">
+          <Select v-model:value="formData.refreshInterval" placeholder="请选择刷新间隔" style="width: 200px">
+            <SelectOption :value="1">1秒</SelectOption>
+            <SelectOption :value="2">2秒</SelectOption>
+            <SelectOption :value="5">5秒</SelectOption>
+            <SelectOption :value="10">10秒</SelectOption>
+          </Select>
         </FormItem>
       </Form>
     </Modal>
@@ -211,6 +222,7 @@ const formData = reactive({
   protocol: '',
   port: null as number | null,
   remark: '',
+  refreshInterval: 2,
 });
 
 const formRules = {
@@ -226,6 +238,7 @@ const resetForm = () => {
   formData.protocol = '';
   formData.port = null;
   formData.remark = '';
+  formData.refreshInterval = 2;
 };
 
 const handleAddTarget = () => {
@@ -243,6 +256,7 @@ const handleEditTarget = (record: MonitorTarget) => {
     protocol: record.protocol,
     port: record.port,
     remark: record.remark,
+    refreshInterval: record.refreshInterval,
   });
   modalVisible.value = true;
 };
@@ -254,6 +268,7 @@ const handleDeleteTarget = (record: MonitorTarget) => {
     chartInstances.delete(record.key);
   }
   chartRefs.delete(record.key);
+  stopTimer(record.key);
   monitorTargets.value = monitorTargets.value.filter((item) => item.key !== record.key);
   message.success('删除成功');
 };
@@ -264,14 +279,27 @@ const handleSubmit = async () => {
     if (isEdit.value) {
       const index = monitorTargets.value.findIndex((item) => item.key === formData.key);
       if (index > -1) {
+        const existingTarget = monitorTargets.value[index];
+        if (!existingTarget) return;
+        
         monitorTargets.value[index] = {
-          ...monitorTargets.value[index],
+          key: existingTarget.key,
           name: formData.name,
           address: formData.address,
           protocol: formData.protocol,
           port: formData.port,
+          status: existingTarget.status,
+          rtt: existingTarget.rtt,
           remark: formData.remark,
+          refreshInterval: formData.refreshInterval,
+          rttHistory: existingTarget.rttHistory,
+          timeLabels: existingTarget.timeLabels,
         };
+        // 重新启动定时器以应用新的刷新间隔
+        const target = monitorTargets.value[index];
+        if (target) {
+          startTimer(target);
+        }
       }
       message.success('编辑成功');
     } else {
@@ -285,14 +313,19 @@ const handleSubmit = async () => {
         status: 'online',
         rtt: Math.floor(Math.random() * 40) + 30,
         remark: formData.remark,
+        refreshInterval: formData.refreshInterval,
         rttHistory: [],
         timeLabels: [],
       });
       message.success('添加成功');
       // 延迟初始化新图表
       setTimeout(() => {
-        initChartForTarget(newKey);
-        initHistoryData(newKey);
+        const newTarget = monitorTargets.value.find(t => t.key === newKey);
+        if (newTarget) {
+          initHistoryData(newKey);
+          initChartForTarget(newKey);
+          startTimer(newTarget);
+        }
       }, 100);
     }
     modalVisible.value = false;
@@ -319,6 +352,33 @@ const getRttClass = (rtt: number, status?: string): string => {
   return 'text-red-500';
 };
 
+// 生成时间字符串
+const generateTimeStr = (timestamp: number): string => {
+  const now = new Date(timestamp);
+  return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+};
+
+// 生成RTT数据
+const generateRtt = (status: string): number => {
+  return status === 'offline' ? 0 : Math.floor(Math.random() * 40) + 30;
+};
+
+// 追加数据点到目标（统一的数据处理逻辑）
+const appendPoint = (target: MonitorTarget, timestamp?: number) => {
+  const time = timestamp || Date.now();
+  const timeStr = generateTimeStr(time);
+  const rtt = generateRtt(target.status);
+
+  target.rtt = rtt;
+  target.rttHistory.push(rtt);
+  target.timeLabels.push(timeStr);
+
+  if (target.rttHistory.length > 30) {
+    target.rttHistory.shift();
+    target.timeLabels.shift();
+  }
+};
+
 // 初始化单个目标的图表
 const initChartForTarget = (key: string) => {
   const el = chartRefs.get(key);
@@ -329,12 +389,14 @@ const initChartForTarget = (key: string) => {
 
   let chart = chartInstances.get(key);
   if (!chart) {
-    chart = echarts.init(el);
+    // 使用 svg 渲染器，对于大量小图表性能更好
+    chart = echarts.init(el, undefined, { renderer: 'canvas' });
     chartInstances.set(key, chart);
   }
 
   const colors = chartColors.value;
   const option: echarts.EChartsOption = {
+    animation: false, // 关闭动画提升性能
     grid: { left: 50, right: 20, bottom: 30, top: 10 },
     xAxis: {
       type: 'category',
@@ -363,8 +425,8 @@ const initChartForTarget = (key: string) => {
         ]),
       },
       itemStyle: { color: '#1890ff' },
-      symbol: 'circle',
-      symbolSize: 4,
+      symbol: 'none', // 不显示数据点，减少渲染
+      sampling: 'lttb', // 使用降采样算法
     }],
     tooltip: {
       trigger: 'axis',
@@ -378,45 +440,64 @@ const initChartForTarget = (key: string) => {
   chart.setOption(option);
 };
 
-// 初始化历史数据
+// 初始化历史数据（通过循环调用 appendPoint）
 const initHistoryData = (key: string) => {
   const target = monitorTargets.value.find((t) => t.key === key);
   if (!target) return;
   
-  for (let i = 0; i < 20; i++) {
-    const now = new Date(Date.now() - (20 - i) * 2000);
-    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-    target.timeLabels.push(timeStr);
-    // 离线设备历史数据为 0
-    target.rttHistory.push(target.status === 'offline' ? 0 : Math.floor(Math.random() * 40) + 30);
+  const refreshInterval = target.refreshInterval * 1000;
+  const historyCount = 20;
+  
+  for (let i = 0; i < historyCount; i++) {
+    const timestamp = Date.now() - (historyCount - i) * refreshInterval;
+    appendPoint(target, timestamp);
   }
 };
 
-// 更新所有图表
-const updateAllCharts = () => {
-  const now = new Date();
-  const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+// 更新单个目标的图表
+const updateSingleTarget = (target: MonitorTarget) => {
+  appendPoint(target);
 
+  const chart = chartInstances.get(target.key);
+  if (chart) {
+    chart.setOption({
+      xAxis: { data: target.timeLabels },
+      series: [{ data: target.rttHistory }],
+    });
+  }
+};
+
+// 为每个目标维护独立的定时器
+const targetTimers = new Map<string, ReturnType<typeof setInterval>>();
+
+// 启动所有目标的定时器
+const startAllTimers = () => {
   monitorTargets.value.forEach((target) => {
-    // 离线设备 RTT 为 0，不更新数据
-    const newRtt = target.status === 'offline' ? 0 : Math.floor(Math.random() * 40) + 30;
-    target.rtt = newRtt;
-    target.rttHistory.push(newRtt);
-    target.timeLabels.push(timeStr);
-
-    if (target.rttHistory.length > 30) {
-      target.rttHistory.shift();
-      target.timeLabels.shift();
-    }
-
-    const chart = chartInstances.get(target.key);
-    if (chart) {
-      chart.setOption({
-        xAxis: { data: target.timeLabels },
-        series: [{ data: target.rttHistory }],
-      });
-    }
+    startTimer(target);
   });
+};
+
+// 启动单个目标的定时器
+const startTimer = (target: MonitorTarget) => {
+  const existingTimer = targetTimers.get(target.key);
+  if (existingTimer) {
+    clearInterval(existingTimer);
+  }
+  
+  const timer = setInterval(() => {
+    updateSingleTarget(target);
+  }, target.refreshInterval * 1000);
+  
+  targetTimers.set(target.key, timer);
+};
+
+// 停止单个目标的定时器
+const stopTimer = (key: string) => {
+  const timer = targetTimers.get(key);
+  if (timer) {
+    clearInterval(timer);
+    targetTimers.delete(key);
+  }
 };
 
 // 更新所有图表主题
@@ -441,6 +522,7 @@ watch(filteredTargets, async (newTargets, oldTargets) => {
           chartInstances.delete(target.key);
         }
         chartRefs.delete(target.key);
+        stopTimer(target.key);
       }
     });
   }
@@ -448,32 +530,56 @@ watch(filteredTargets, async (newTargets, oldTargets) => {
   // 等待 DOM 更新完成
   await nextTick();
   
-  // 重新初始化当前显示的图表
-  newTargets.forEach((target) => {
-    initChartForTarget(target.key);
-  });
+  // 分批重新初始化当前显示的图表
+  batchInitCharts(newTargets);
 });
 
-let updateInterval: ReturnType<typeof setInterval>;
-
-onMounted(() => {
-  // 初始化所有目标的历史数据和图表
-  setTimeout(() => {
-    monitorTargets.value.forEach((target) => {
-      initHistoryData(target.key);
+// 分批初始化图表，避免一次性渲染过多导致卡顿
+const batchInitCharts = (targets: MonitorTarget[], batchSize = 3) => {
+  let index = 0;
+  
+  const initBatch = () => {
+    const batch = targets.slice(index, index + batchSize);
+    batch.forEach((target) => {
       initChartForTarget(target.key);
     });
-  }, 100);
+    index += batchSize;
+    
+    if (index < targets.length) {
+      requestAnimationFrame(initBatch);
+    }
+  };
+  
+  requestAnimationFrame(initBatch);
+};
 
-  updateInterval = setInterval(updateAllCharts, 2000);
+onMounted(() => {
+  // 先初始化所有目标的历史数据
+  monitorTargets.value.forEach((target) => {
+    initHistoryData(target.key);
+  });
 
+  // 等待 DOM 更新完成后分批初始化图表
+  nextTick(() => {
+    batchInitCharts(monitorTargets.value);
+  });
+
+  // 启动所有目标的定时器
+  startAllTimers();
+
+  // 使用防抖处理 resize
+  let resizeTimer: ReturnType<typeof setTimeout>;
   window.addEventListener('resize', () => {
-    chartInstances.forEach((chart) => chart.resize());
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      chartInstances.forEach((chart) => chart.resize());
+    }, 100);
   });
 });
 
 onUnmounted(() => {
-  if (updateInterval) clearInterval(updateInterval);
+  targetTimers.forEach((timer) => clearInterval(timer));
+  targetTimers.clear();
   chartInstances.forEach((chart) => chart.dispose());
   chartInstances.clear();
 });

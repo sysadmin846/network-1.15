@@ -361,10 +361,10 @@ const observeTimePanel = () => {
   if (!panel) return;
   
   timePanelObserver = new MutationObserver(() => {
-    // 选中状态变化后居中
+    // 选中状态变化后居中，延迟更长时间确保在 Ant Design 滚动之后执行
     setTimeout(() => {
       scrollTimePanelToCenter();
-    }, 50);
+    }, 150);
   });
   
   timePanelObserver.observe(panel, {
@@ -384,7 +384,8 @@ const scrollTimePanelToCenter = () => {
       const itemTop = selected.offsetTop;
       // 计算居中位置
       const scrollTop = itemTop - (columnHeight / 2) + (itemHeight / 2);
-      column.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
+      // 直接设置 scrollTop，不使用 smooth 避免与 Ant Design 冲突
+      column.scrollTop = Math.max(0, scrollTop);
     }
   });
 };

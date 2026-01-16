@@ -315,11 +315,16 @@ const handleQuery = () => {
       startTime = endTime - 60 * 60 * 1000;
     }
     
-    // 按实际刷新间隔生成数据点
-    const dataPoints = Math.floor((endTime - startTime) / refreshInterval);
+    // 按实际刷新间隔计算理论数据点
+    const totalPoints = Math.floor((endTime - startTime) / refreshInterval);
+    // 限制最大数据点数量为500，超过则采样
+    const maxPoints = 500;
+    const sampleRate = Math.max(1, Math.ceil(totalPoints / maxPoints));
+    const actualInterval = refreshInterval * sampleRate;
+    const dataPoints = Math.min(totalPoints, maxPoints);
     
     for (let i = 0; i < dataPoints; i++) {
-      const time = new Date(startTime + i * refreshInterval);
+      const time = new Date(startTime + i * actualInterval);
       const fullTimeStr = `${time.getFullYear()}-${(time.getMonth() + 1).toString().padStart(2, '0')}-${time.getDate().toString().padStart(2, '0')} ${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`;
       const shortTimeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`;
       

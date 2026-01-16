@@ -402,14 +402,21 @@ const initChartForTarget = (key: string) => {
     // 开启动画，实现滑动效果
     animation: true,
     animationDuration: 300,
+    animationDurationUpdate: 300,
     animationEasing: 'linear',
+    animationEasingUpdate: 'linear',
     grid: { left: 50, right: 20, bottom: 30, top: 10 },
     xAxis: {
       type: 'category',
       data: target.timeLabels,
       boundaryGap: false,
       axisLine: { lineStyle: { color: colors.axisLine } },
-      axisLabel: { color: colors.axisLabel, fontSize: 10 },
+      axisLabel: { 
+        color: colors.axisLabel, 
+        fontSize: 10,
+      },
+      // X轴动画配置
+      animation: true,
     },
     yAxis: {
       type: 'value',
@@ -434,9 +441,6 @@ const initChartForTarget = (key: string) => {
       },
       itemStyle: { color: '#1890ff' },
       symbol: 'none',
-      // 关键：开启动画更新
-      animationDuration: 300,
-      animationEasing: 'linear',
     }],
     tooltip: {
       trigger: 'axis',

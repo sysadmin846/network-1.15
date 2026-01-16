@@ -333,6 +333,7 @@ watch(isDark, () => {
 
 onUnmounted(() => {
   if (chartInstance) chartInstance.dispose();
+  if (timePanelObserver) timePanelObserver.disconnect();
 });
 
 // 时间选择器打开时，将选中项滚动到居中位置
@@ -341,26 +342,35 @@ const onPickerOpenChange = (open: boolean) => {
     // 等待面板渲染完成
     setTimeout(() => {
       scrollTimePanelToCenter();
-      // 添加点击监听，点击后重新居中
-      addTimePanelClickListener();
+      // 使用 MutationObserver 监听选中状态变化
+      observeTimePanel();
     }, 100);
   }
 };
 
-// 添加时间面板点击监听
-const addTimePanelClickListener = () => {
-  const columns = document.querySelectorAll('.time-picker-centered .ant-picker-time-panel-column');
-  columns.forEach((column) => {
-    // 移除旧的监听器避免重复
-    const newColumn = column.cloneNode(true);
-    column.parentNode?.replaceChild(newColumn, column);
-    
-    newColumn.addEventListener('click', () => {
-      // 点击后延迟执行居中，等待选中状态更新
-      setTimeout(() => {
-        scrollTimePanelToCenter();
-      }, 50);
-    });
+// 使用 MutationObserver 监听时间面板选中状态变化
+let timePanelObserver: MutationObserver | null = null;
+
+const observeTimePanel = () => {
+  // 清理旧的观察器
+  if (timePanelObserver) {
+    timePanelObserver.disconnect();
+  }
+  
+  const panel = document.querySelector('.time-picker-centered .ant-picker-time-panel');
+  if (!panel) return;
+  
+  timePanelObserver = new MutationObserver(() => {
+    // 选中状态变化后居中
+    setTimeout(() => {
+      scrollTimePanelToCenter();
+    }, 50);
+  });
+  
+  timePanelObserver.observe(panel, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class'],
   });
 };
 

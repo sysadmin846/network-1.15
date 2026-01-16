@@ -574,13 +574,15 @@ onMounted(() => {
     initHistoryData(target.key);
   });
 
-  // 等待 DOM 更新完成后分批初始化图表
+  // 等待 DOM 完全渲染后再初始化图表
   nextTick(() => {
-    batchInitCharts(monitorTargets.value);
+    // 额外延迟确保 v-for 渲染的 ref 已设置
+    setTimeout(() => {
+      batchInitCharts(monitorTargets.value);
+      // 启动所有目标的定时器
+      startAllTimers();
+    }, 50);
   });
-
-  // 启动所有目标的定时器
-  startAllTimers();
 
   // 使用防抖处理 resize
   let resizeTimer: ReturnType<typeof setTimeout>;

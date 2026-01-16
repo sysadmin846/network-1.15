@@ -114,6 +114,7 @@ const queryResults = ref<
     status: string;
     rtt: number;
     time: string;
+    shortTime: string;
   }[]
 >([]);
 const queryPagination = reactive({
@@ -253,7 +254,10 @@ const handleQuery = () => {
     for (let i = 0; i < 50; i++) {
       // 根据刷新间隔生成时间点
       const time = new Date(now - (50 - i) * refreshInterval);
-      const timeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`;
+      // 完整时间格式：年-月-日 时:分:秒（用于表格）
+      const fullTimeStr = `${time.getFullYear()}-${(time.getMonth() + 1).toString().padStart(2, '0')}-${time.getDate().toString().padStart(2, '0')} ${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`;
+      // 简短时间格式：时:分:秒（用于图表）
+      const shortTimeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`;
       
       // 根据目标状态生成数据
       let status: string;
@@ -275,13 +279,15 @@ const handleQuery = () => {
         address: `${target.address}${target.port ? `:${target.port}` : ''}`,
         status,
         rtt,
-        time: timeStr,
+        time: fullTimeStr,
+        shortTime: shortTimeStr,
       });
     }
     queryResults.value = mockData;
     queryPagination.total = mockData.length;
     queryLoading.value = false;
-    nextTick(() => initChart(mockData.map((d) => ({ time: d.time, rtt: d.rtt, status: d.status }))));
+    // 图表使用简短时间
+    nextTick(() => initChart(mockData.map((d) => ({ time: d.shortTime, rtt: d.rtt, status: d.status }))));
   }, 500);
 };
 
@@ -307,7 +313,7 @@ const handleTableChange = (pagination: { current: number; pageSize: number }) =>
 // 监听主题变化
 watch(isDark, () => {
   if (queryResults.value.length > 0 && chartInstance) {
-    initChart(queryResults.value.map((d) => ({ time: d.time, rtt: d.rtt, status: d.status })));
+    initChart(queryResults.value.map((d) => ({ time: d.shortTime, rtt: d.rtt, status: d.status })));
   }
 });
 

@@ -1,0 +1,23 @@
+{
+  "name": "@vben/backend",
+  "version": "0.0.1",
+  "description": "网络监控控制台后端服务",
+  "private": true,
+  "license": "MIT",
+  "author": "",
+  "scripts": {
+    "build": "nitro build",
+    "dev": "nitro dev --port 5320",
+    "start": "nitro dev --port 5320"
+  },
+  "dependencies": {
+    "@faker-js/faker": "catalog:",
+    "jsonwebtoken": "catalog:",
+    "mysql2": "^3.16.1",
+    "nitropack": "catalog:"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "catalog:",
+    "h3": "catalog:"
+  }
+}

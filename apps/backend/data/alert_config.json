@@ -1,0 +1,17 @@
+{
+  "enabled": false,
+  "consecutiveFailures": 3,
+  "cooldownMinutes": 1,
+  "notifyOnRecovery": true,
+  "smsPhone": "17681914520",
+  "channels": {
+    "sms": true,
+    "inApp": true,
+    "email": false
+  },
+  "selectedTargets": [
+    "1768559095503",
+    "1768556525896"
+  ],
+  "updatedAt": "2026/1/17 08:21:43"
+}

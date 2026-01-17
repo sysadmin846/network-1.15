@@ -1,0 +1,63 @@
+[
+  {
+    "id": "1768561390325",
+    "time": "2026/1/16 19:03:10",
+    "type": "alert",
+    "targetKey": "1768559095503",
+    "targetName": "Windows ",
+    "targetAddress": "10.88.19.65",
+    "offlineTime": "2026/1/16 19:03:06",
+    "recoveryTime": "",
+    "content": "尊敬的运维工程师，监测到节点（Windows  - 10.88.19.65）于 2026/1/16 19:03:06 断线，目前处于异常状态，请及时排查。",
+    "smsStatus": "sent",
+    "smsError": ""
+  },
+  {
+    "id": "1768549018719",
+    "time": "2026/1/16 15:36:58",
+    "type": "alert",
+    "targetKey": "9",
+    "targetName": "Google",
+    "targetAddress": "www.google.com",
+    "offlineTime": "2026/1/16 15:36:54",
+    "recoveryTime": "",
+    "content": "尊敬的运维工程师，监测到节点（Google - www.google.com）于 2026/1/16 15:36:54 断线，目前处于异常状态，请及时排查。",
+    "smsStatus": "sent",
+    "smsError": ""
+  },
+  {
+    "id": "1768549011984",
+    "time": "2026/1/16 15:36:51",
+    "type": "alert",
+    "targetKey": "9",
+    "targetName": "Google",
+    "targetAddress": "www.google.com",
+    "offlineTime": "2026/1/16 15:36:47",
+    "recoveryTime": "",
+    "content": "尊敬的运维工程师，监测到节点（Google - www.google.com）于 2026/1/16 15:36:47 断线，目前处于异常状态，请及时排查。",
+    "smsStatus": "sent",
+    "smsError": ""
+  },
+  {
+    "id": "1768543798706",
+    "time": "2026/1/16 14:09:58",
+    "type": "alert",
+    "targetKey": "9",
+    "targetName": "Google",
+    "targetAddress": "www.google.com",
+    "content": "尊敬的运维工程师，监测到节点（Google - www.google.com）目前处于异常状态，请及时排查。",
+    "smsStatus": "sent",
+    "smsError": ""
+  },
+  {
+    "id": "1768543742647",
+    "time": "2026/1/16 14:09:02",
+    "type": "alert",
+    "targetKey": "9",
+    "targetName": "Google",
+    "targetAddress": "www.google.com",
+    "content": "尊敬的运维工程师，监测到节点（Google - www.google.com）目前处于异常状态，请及时排查。",
+    "smsStatus": "sent",
+    "smsError": ""
+  }
+]
